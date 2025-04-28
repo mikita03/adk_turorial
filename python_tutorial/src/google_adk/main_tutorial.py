@@ -408,11 +408,72 @@ def run_mcp_agent_demo():
     print("\nModel Contexts Protocol (MCP)を使用するエージェントのデモが完了しました。")
     print("詳細な実装は examples/mcp_agent.py を参照してください。")
 
+def run_open_source_mcp_agent_demo():
+    """オープンソースMCP実装（lastmile-ai/mcp-agent）を使用するエージェントのデモを実行する"""
+    print("\n===== オープンソースMCP実装（lastmile-ai/mcp-agent）を使用するエージェントのデモ =====")
+    
+    has_api_key = check_api_key()
+    
+    print("\nlastmile-ai/mcp-agentとは:")
+    print("lastmile-ai/mcp-agentは、Model Contexts Protocol (MCP)の人気のあるオープンソース実装です。")
+    print("このライブラリは、エージェントの開発とデプロイを簡素化し、複数のLLMプロバイダーとの統合を")
+    print("サポートしています。特に、GoogleのGeminiモデルとの統合が強力です。")
+    
+    print("\nlastmile-ai/mcp-agentの主な特徴:")
+    print("- MCPAppクラス: エージェントアプリケーションの作成と設定を簡素化")
+    print("- 非同期実行: asyncioベースのエージェント作成と実行")
+    print("- 構造化レスポンス: Pydanticモデルを使用した予測可能な出力形式")
+    print("- ツール統合: 外部ツールとの簡単な統合")
+    print("- 柔軟な設定: プログラムによる設定または設定ファイルからの読み込み")
+    
+    print("\nこのデモでは、lastmile-ai/mcp-agentを使用してGoogle ADKと統合する方法を示します。")
+    print("実際のデモを実行するには、examples/open_source_mcp_agent.py を実行してください。")
+    
+    print("\n主な統合ポイント:")
+    print("1. MCPAppクラスを使用したアプリケーションのセットアップ")
+    print("2. GoogleAugmentedLLMを使用したGoogleのGeminiモデルとの統合")
+    print("3. MCPエージェントとADKエージェントの連携")
+    print("4. 構造化レスポンスの生成")
+    
+    print("\n使用例:")
+    print("""
+    settings = Settings(
+        execution_engine="asyncio",
+        logger=LoggerSettings(type="file", level="debug"),
+        mcp=MCPSettings(
+            servers={
+                "fetch": MCPServerSettings(
+                    command="uvx",
+                    args=["mcp-server-fetch"],
+                )
+            }
+        )
+    )
+    
+    app = MCPApp(settings=settings)
+    
+    llm = GoogleAugmentedLLM(
+        model="gemini-1.5-pro",
+        api_key=api_key,
+        temperature=0.7,
+        max_output_tokens=1024
+    )
+    
+    agent = MCPAgent(
+        name="Finder",
+        description="情報を検索して要約するエージェント",
+        llm=llm
+    )
+    """)
+    
+    print("\nオープンソースMCP実装（lastmile-ai/mcp-agent）を使用するエージェントのデモが完了しました。")
+    print("詳細な実装は examples/open_source_mcp_agent.py を参照してください。")
+
 def main():
     """メインチュートリアルを実行する"""
     parser = argparse.ArgumentParser(description="Google Agent Development Kit (ADK) チュートリアル")
-    parser.add_argument("--demo", choices=["basic", "tool", "context", "mcp", "all"], default="all",
-                        help="実行するデモを指定します（basic: 基本的なエージェント, tool: ツールを使用するエージェント, context: コンテキスト管理を活用したエージェント, mcp: Model Contexts Protocol (MCP)を使用するエージェント, all: すべて）")
+    parser.add_argument("--demo", choices=["basic", "tool", "context", "mcp", "open_source_mcp", "all"], default="all",
+                        help="実行するデモを指定します（basic: 基本的なエージェント, tool: ツールを使用するエージェント, context: コンテキスト管理を活用したエージェント, mcp: Model Contexts Protocol (MCP)を使用するエージェント, open_source_mcp: オープンソースMCP実装を使用するエージェント, all: すべて）")
     parser.add_argument("--verbose", action="store_true", help="詳細なログを表示します")
     
     args = parser.parse_args()
@@ -430,6 +491,7 @@ def main():
     print("- ツール統合: 外部APIやサービスと連携して情報を取得・処理")
     print("- コンテキスト管理: 会話の文脈を維持し、一貫した対話を実現")
     print("- Model Contexts Protocol (MCP): 複数のコンテキストを管理し、情報を共有")
+    print("- オープンソースMCP統合: 人気のあるMCP実装との連携")
     print("- カスタマイズ可能: 特定のドメインやタスクに特化したエージェントを構築可能")
     print("- マルチモーダル対応: テキスト、画像、音声などの複数のモダリティを処理可能")
     
@@ -444,6 +506,9 @@ def main():
     
     if args.demo in ["mcp", "all"]:
         run_mcp_agent_demo()
+    
+    if args.demo in ["open_source_mcp", "all"]:
+        run_open_source_mcp_agent_demo()
     
     print("\n" + "=" * 80)
     print("チュートリアルが完了しました。")

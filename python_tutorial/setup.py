@@ -7,6 +7,7 @@ setup(
     package_dir={"": "src"},
     install_requires=[
         "google-generativeai>=0.8.0",
+        "mcp-agent>=0.1.0",
     ],
     description="Google Agent Development Kit (ADK) Tutorial",
     author="Devin AI",
