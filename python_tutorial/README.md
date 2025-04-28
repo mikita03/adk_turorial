@@ -12,6 +12,7 @@
    - [AgentConfig](#agentconfig)
    - [Tool](#tool)
    - [Model Contexts Protocol (MCP)](#model-contexts-protocol-mcp)
+   - [オープンソースMCP実装](#オープンソースmcp実装)
 5. [デモの実行](#デモの実行)
 6. [コード例](#コード例)
 7. [参考リソース](#参考リソース)
@@ -26,6 +27,7 @@ Google Agent Development Kit (ADK) は、Googleの生成AIモデルを活用し�
 - **ツール統合**: 外部APIやサービスと連携して情報を取得・処理
 - **コンテキスト管理**: 会話の文脈を維持し、一貫した対話を実現
 - **Model Contexts Protocol (MCP)**: 複数のコンテキストを管理し、情報を共有
+- **オープンソースMCP統合**: 人気のあるMCP実装との連携
 - **カスタマイズ可能**: 特定のドメインやタスクに特化したエージェントを構築可能
 - **マルチモーダル対応**: テキスト、画像、音声などの複数のモダリティを処理可能
 
@@ -92,6 +94,9 @@ python main_tutorial.py --demo context
 
 # Model Contexts Protocol (MCP)を使用するエージェントデモ
 python main_tutorial.py --demo mcp
+
+# オープンソースMCP実装を使用するエージェントデモ
+python main_tutorial.py --demo open_source_mcp
 ```
 
 詳細なログを表示するには：
@@ -162,9 +167,25 @@ python main_tutorial.py --verbose
   - `get_context_value(key, context_id)`: コンテキストから値を取得する
   - `delete_context(context_id)`: コンテキストを削除する
 
+### オープンソースMCP実装
+
+このチュートリアルでは、人気のあるオープンソースMCP実装である `lastmile-ai/mcp-agent` を統合しています：
+
+- **lastmile-ai/mcp-agent の特徴**:
+  - MCPAppクラス: エージェントアプリケーションの作成と設定を簡素化
+  - 非同期実行: asyncioベースのエージェント作成と実行
+  - 構造化レスポンス: Pydanticモデルを使用した予測可能な出力形式
+  - ツール統合: 外部ツールとの簡単な統合
+  - 柔軟な設定: プログラムによる設定または設定ファイルからの読み込み
+
+- **主要なクラス**:
+  - `MCPApp`: エージェントアプリケーションの作成と設定を管理するクラス
+  - `MCPAgent`: lastmile-ai/mcp-agentのエージェントクラス
+  - `GoogleAugmentedLLM`: GoogleのGeminiモデルとの統合を提供するクラス
+
 ## デモの実行
 
-このチュートリアルには、4つのデモが含まれています：
+このチュートリアルには、5つのデモが含まれています：
 
 ### 基本的なエージェントデモ
 
@@ -181,6 +202,10 @@ python main_tutorial.py --verbose
 ### Model Contexts Protocol (MCP)を使用するエージェントデモ
 
 Model Contexts Protocol (MCP)を使用するエージェントデモでは、複数のコンテキストを管理し、それらの間で情報を共有するエージェントを作成する方法を示します。
+
+### オープンソースMCP実装を使用するエージェントデモ
+
+オープンソースMCP実装（lastmile-ai/mcp-agent）を使用するエージェントデモでは、人気のあるオープンソースMCP実装を統合し、より高度なコンテキスト管理と情報共有を実現するエージェントを作成する方法を示します。このデモでは、MCPAppクラス、非同期実行、構造化レスポンスなどの機能を活用する方法を学びます。
 
 ## コード例
 
@@ -315,8 +340,113 @@ agent = Agent(
 )
 ```
 
+### オープンソースMCP実装（lastmile-ai/mcp-agent）を使用するエージェントの作成
+
+```python
+import asyncio
+from google_adk import Agent, AgentConfig, Tool
+from google_adk import MCPApp, MCPAgent, GoogleAugmentedLLM
+
+async def setup_mcp_agent():
+    """lastmile-ai/mcp-agentを使用したエージェントをセットアップする"""
+    from mcp_agent.config import (
+        Settings,
+        LoggerSettings,
+        MCPSettings,
+        MCPServerSettings
+    )
+    
+    # MCPアプリケーションの設定
+    settings = Settings(
+        execution_engine="asyncio",
+        logger=LoggerSettings(type="file", level="debug"),
+        mcp=MCPSettings(
+            servers={
+                "fetch": MCPServerSettings(
+                    command="uvx",
+                    args=["mcp-server-fetch"],
+                )
+            }
+        )
+    )
+    
+    # MCPアプリケーションの初期化
+    app = MCPApp(settings=settings)
+    
+    # GoogleAugmentedLLMの設定
+    llm = GoogleAugmentedLLM(
+        model="gemini-1.5-pro",
+        api_key="YOUR_API_KEY",  # 実際のAPIキーに置き換えてください
+        temperature=0.7,
+        max_output_tokens=1024
+    )
+    
+    # MCPエージェントの作成
+    agent = MCPAgent(
+        name="Finder",
+        description="情報を検索して要約するエージェント",
+        llm=llm
+    )
+    
+    return agent
+
+# 検索ツールの定義
+def search_with_mcp(query, max_results=3):
+    """MCPを使用して情報を検索し、要約する"""
+    # 実際の実装では、MCPエージェントを使用して検索と要約を行います
+    return {
+        "query": query,
+        "results": [
+            {
+                "title": f"{query}に関する情報",
+                "url": f"https://example.com/info?q={query}",
+                "snippet": f"{query}についての詳細な情報が含まれています。"
+            }
+        ],
+        "summary": f"{query}に関する主要な情報をまとめると、最新の開発動向、一般的な使用方法、よくある問題と解決策が重要です。"
+    }
+
+# 検索ツールの作成
+search_tool = Tool(
+    name="search_with_mcp",
+    description="MCPを使用して情報を検索し、要約します",
+    function=search_with_mcp,
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": "検索クエリ"
+            },
+            "max_results": {
+                "type": "integer",
+                "description": "返す結果の最大数",
+                "minimum": 1,
+                "maximum": 10
+            }
+        },
+        "required": ["query"]
+    }
+)
+
+# ADKエージェントの作成
+adk_agent = Agent(
+    name="ADK-MCPアシスタント",
+    description="Google ADKとlastmile-ai/mcp-agentを統合したアシスタント",
+    config=AgentConfig(model_name="gemini-1.5-pro"),
+    tools=[search_tool]
+)
+
+# ツールの実行
+search_result = adk_agent.execute_tool("search_with_mcp", query="量子コンピューティング")
+print(f"検索クエリ: {search_result['query']}")
+print(f"要約: {search_result['summary']}")
+```
+
 ## 参考リソース
 
 - [Google AI Platform](https://ai.google.dev/)
 - [Google Generative AI Python SDK](https://github.com/google/generative-ai-python)
 - [Gemini API Documentation](https://ai.google.dev/docs/gemini_api_overview)
+- [lastmile-ai/mcp-agent](https://github.com/lastmile-ai/mcp-agent) - オープンソースMCP実装
+- [Model Contexts Protocol (MCP) Specification](https://github.com/lastmile-ai/aiconfig/tree/main/mcp)
