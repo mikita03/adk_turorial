@@ -1,6 +1,6 @@
-# Android Accessory Development Kit (ADK) チュートリアル
+# Google Agent Development Kit (ADK) チュートリアル
 
-このチュートリアルでは、Android Accessory Development Kit (ADK) の基本的な使い方を Python で実装したシミュレーションを通じて学びます。ADK を使用すると、Android デバイスと外部ハードウェアアクセサリを接続し、通信することができます。
+このチュートリアルでは、Google Agent Development Kit (ADK) の基本的な使い方を Python で実装したサンプルを通じて学びます。ADK を使用すると、Googleの生成AIモデルを活用して、特定のタスクを実行するインテリジェントなエージェントを構築することができます。
 
 ## 目次
 
@@ -8,59 +8,65 @@
 2. [チュートリアルの構成](#チュートリアルの構成)
 3. [使用方法](#使用方法)
 4. [コンポーネントの説明](#コンポーネントの説明)
-   - [AccessoryDevice](#accessorydevice)
-   - [LEDController](#ledcontroller)
-   - [TemperatureSensor](#temperaturesensor)
-   - [GameController](#gamecontroller)
-   - [ADKManager](#adkmanager)
+   - [Agent](#agent)
+   - [AgentConfig](#agentconfig)
+   - [Tool](#tool)
+   - [Model Contexts Protocol (MCP)](#model-contexts-protocol-mcp)
 5. [デモの実行](#デモの実行)
 6. [コード例](#コード例)
 7. [参考リソース](#参考リソース)
 
 ## ADK の概要
 
-Android Accessory Development Kit (ADK) は、Android デバイスと外部ハードウェアアクセサリを接続するためのリファレンス実装です。ADK は Android Open Accessory (AOA) プロトコルに基づいており、Android デバイスが「アクセサリモード」で動作することを可能にします。
+Google Agent Development Kit (ADK) は、Googleの生成AIモデルを活用して、特定のタスクを実行するインテリジェントなエージェントを構築するためのツールキットです。ADK を使用することで、自然言語理解、ツール統合、コンテキスト管理などの機能を持つエージェントを簡単に開発することができます。
 
 ### 主な特徴
 
-- **USB アクセサリモード**: アクセサリが USB ホストとして機能し、Android デバイスと通信します
-- **AOA プロトコル**: Android デバイスとアクセサリ間の標準化された通信プロトコル（AOAv1 と AOAv2）
-- **ハードウェア統合**: センサー、コントローラ、ディスプレイなどの様々なハードウェアとの統合
-- **Android API サポート**: アクセサリの検出、接続、通信のための Android アプリケーション API
+- **自然言語理解**: ユーザーの入力を理解し、適切な応答を生成
+- **ツール統合**: 外部APIやサービスと連携して情報を取得・処理
+- **コンテキスト管理**: 会話の文脈を維持し、一貫した対話を実現
+- **Model Contexts Protocol (MCP)**: 複数のコンテキストを管理し、情報を共有
+- **カスタマイズ可能**: 特定のドメインやタスクに特化したエージェントを構築可能
+- **マルチモーダル対応**: テキスト、画像、音声などの複数のモダリティを処理可能
 
 ### ADK の仕組み
 
-1. **アクセサリ検出**: Android デバイスが USB 経由でアクセサリに接続されると、アクセサリはベンダー固有の USB コントロールリクエストを使用して Android Open Accessory として自身を識別します
-2. **プロトコルネゴシエーション**: アクセサリと Android デバイスが使用する AOA プロトコルのバージョンをネゴシエートします
-3. **アクセサリモードの有効化**: Android デバイスがアクセサリモードに入り、アクセサリが USB ホストになります
-4. **通信**: Android アプリケーションとアクセサリが USB 経由でバルク転送を使用して通信します
+1. **エージェント設定**: エージェントの名前、説明、使用するモデル、パラメータなどを設定
+2. **ツール統合**: エージェントが使用するツール（外部API、関数など）を定義
+3. **プロンプト設計**: エージェントの動作を制御するシステムプロンプトを設計
+4. **対話処理**: ユーザーの入力を処理し、適切な応答を生成
+5. **コンテキスト管理**: 会話の文脈を維持し、一貫した対話を実現
 
 ## チュートリアルの構成
 
 このチュートリアルは、ADK の基本的な概念と使用方法を示すために、以下のコンポーネントで構成されています：
 
-- **基本クラス**: `AccessoryDevice` - すべてのアクセサリデバイスの基本クラス
-- **デバイスシミュレーション**:
-  - `LEDController` - LED の明るさ、色、パターンを制御するアクセサリ
-  - `TemperatureSensor` - 温度と湿度を測定するセンサーアクセサリ
-  - `GameController` - ボタン、ジョイスティック、加速度センサーを持つゲームコントローラアクセサリ
-- **管理クラス**: `ADKManager` - アクセサリデバイスの登録、接続、通信を管理
-- **デモ関数**: 各アクセサリタイプのデモンストレーション
+- **基本クラス**:
+  - `Agent` - エージェントの基本クラス
+  - `AgentConfig` - エージェントの設定を管理するクラス
+  - `Tool` - エージェントが使用するツールを定義するクラス
+- **デモ**:
+  - 基本的なエージェント - シンプルな対話エージェント
+  - ツールを使用するエージェント - 外部ツールを活用するエージェント
+  - コンテキスト管理を活用したエージェント - 会話の文脈を維持するエージェント
+  - Model Contexts Protocol (MCP)を使用するエージェント - 複数のコンテキストを管理するエージェント
 
 ## 使用方法
 
 ### 必要条件
 
-- Python 3.6 以上
-- 標準ライブラリのみを使用（外部依存関係なし）
+- Python 3.8 以上
+- Google AI APIキー（[Google AI Studio](https://ai.google.dev/)から取得可能）
 
 ### インストール
 
-このチュートリアルは外部依存関係を持たないため、リポジトリをクローンするだけで使用できます：
-
 ```bash
+# リポジトリをクローン
 git clone https://github.com/yourusername/adk_tutorial.git
 cd adk_tutorial/python_tutorial
+
+# 依存関係をインストール
+pip install -e .
 ```
 
 ### 実行方法
@@ -68,222 +74,249 @@ cd adk_tutorial/python_tutorial
 すべてのデモを実行するには：
 
 ```bash
-python src/adk_tutorial.py
+cd src/google_adk
+python main_tutorial.py
 ```
 
 特定のデモのみを実行するには：
 
 ```bash
-# LEDコントローラデモ
-python src/adk_tutorial.py --demo led
+# 基本的なエージェントデモ
+python main_tutorial.py --demo basic
 
-# 温度センサーデモ
-python src/adk_tutorial.py --demo temp
+# ツールを使用するエージェントデモ
+python main_tutorial.py --demo tool
 
-# ゲームコントローラデモ
-python src/adk_tutorial.py --demo game
+# コンテキスト管理を活用したエージェントデモ
+python main_tutorial.py --demo context
+
+# Model Contexts Protocol (MCP)を使用するエージェントデモ
+python main_tutorial.py --demo mcp
 ```
 
 詳細なログを表示するには：
 
 ```bash
-python src/adk_tutorial.py --verbose
+python main_tutorial.py --verbose
 ```
 
 ## コンポーネントの説明
 
-### AccessoryDevice
+### Agent
 
-`AccessoryDevice` は、すべてのアクセサリデバイスの基本クラスです。このクラスは、アクセサリの基本的な属性と機能を定義します：
+`Agent` は、エージェントの基本クラスです。このクラスは、エージェントの基本的な属性と機能を定義します：
 
 - **属性**:
-  - `device_id`: デバイスの一意の識別子
-  - `name`: デバイスの名前
-  - `manufacturer`: 製造元
-  - `description`: デバイスの説明
-  - `connection_type`: 接続タイプ（USB または Bluetooth）
-  - `protocol_version`: AOA プロトコルのバージョン（AOAv1 または AOAv2）
-  - `features`: デバイスの機能リスト
-  - `connected`: 接続状態
+  - `name`: エージェントの名前
+  - `description`: エージェントの説明
+  - `config`: エージェントの設定（AgentConfig）
+  - `tools`: エージェントが使用するツールのリスト
+  - `system_prompt`: エージェントの動作を制御するシステムプロンプト
+  - `history`: 会話の履歴
 
 - **メソッド**:
-  - `connect()`: デバイスを接続する
-  - `disconnect()`: デバイスを切断する
-  - `send_command(command, params)`: デバイスにコマンドを送信する
-  - `get_info()`: デバイス情報を取得する
+  - `process_message(message)`: ユーザーのメッセージを処理し、応答を生成する
+  - `execute_tool(tool_name, **params)`: 指定されたツールを実行する
+  - `add_to_history(user_message, agent_message)`: 会話の履歴に追加する
 
-### LEDController
+### AgentConfig
 
-`LEDController` は、LED の明るさ、色、パターンを制御するアクセサリをシミュレートします：
+`AgentConfig` は、エージェントの設定を管理するクラスです：
 
-- **状態**:
-  - `brightness`: LED の明るさ（0-100%）
-  - `color`: LED の色（16進数カラーコード）
-  - `pattern`: LED のパターン（solid, blink, pulse, rainbow）
-  - `power`: 電源状態（オン/オフ）
+- **属性**:
+  - `model_name`: 使用するモデルの名前
+  - `temperature`: 生成の多様性（0.0〜1.0）
+  - `max_output_tokens`: 生成される最大トークン数
+  - `top_p`: 生成のランダム性を制御するパラメータ
+  - `top_k`: 生成のランダム性を制御するパラメータ
 
-- **コマンド**:
-  - `set_brightness`: LED の明るさを設定する
-  - `set_color`: LED の色を設定する
-  - `set_pattern`: LED のパターンを設定する
-  - `power`: LED の電源をオン/オフする
+### Tool
 
-### TemperatureSensor
+`Tool` は、エージェントが使用するツールを定義するクラスです：
 
-`TemperatureSensor` は、温度と湿度を測定するセンサーアクセサリをシミュレートします：
-
-- **状態**:
-  - `temperature`: 現在の温度（摂氏）
-  - `humidity`: 現在の湿度（%）
-  - `logging`: データログの状態（オン/オフ）
-  - `log_interval`: ログの間隔（秒）
-  - `data_log`: 記録されたデータのリスト
-
-- **コマンド**:
-  - `read_temperature`: 現在の温度を読み取る
-  - `read_humidity`: 現在の湿度を読み取る
-  - `start_logging`: データログを開始する
-  - `stop_logging`: データログを停止する
-
-### GameController
-
-`GameController` は、ボタン、ジョイスティック、加速度センサーを持つゲームコントローラアクセサリをシミュレートします：
-
-- **状態**:
-  - `buttons`: ボタンの状態（A, B, X, Y, L, R, Start, Select）
-  - `joystick`: ジョイスティックの位置（left, right）
-  - `accelerometer`: 加速度センサーの値（x, y, z）
-  - `vibration`: 振動モーターの強度（left, right）
-
-- **コマンド**:
-  - `read_input`: 現在の入力状態を読み取る
-  - `set_vibration`: 振動モーターの強度を設定する
-
-### ADKManager
-
-`ADKManager` は、アクセサリデバイスの登録、接続、通信を管理するクラスです：
+- **属性**:
+  - `name`: ツールの名前
+  - `description`: ツールの説明
+  - `function`: ツールの実行関数
+  - `parameter_schema`: ツールのパラメータスキーマ（JSON Schema形式）
 
 - **メソッド**:
-  - `register_device(device)`: デバイスを登録する
-  - `unregister_device(device_id)`: デバイスの登録を解除する
-  - `get_device(device_id)`: デバイスを取得する
-  - `get_all_devices()`: すべての登録済みデバイスを取得する
-  - `connect_device(device_id)`: デバイスを接続する
-  - `disconnect_device(device_id)`: デバイスを切断する
-  - `send_command(device_id, command, params)`: デバイスにコマンドを送信する
+  - `execute(**params)`: ツールを実行する
+
+### Model Contexts Protocol (MCP)
+
+`Model Contexts Protocol (MCP)` は、エージェントが複数のコンテキストを管理し、それらの間で情報を共有するためのプロトコルです：
+
+- **主な機能**:
+  - 複数のコンテキストの作成と管理
+  - コンテキスト内での情報の保存と取得
+  - コンテキスト間での情報の共有
+  - 異なるコンテキスト間での切り替え
+
+- **主要な関数**:
+  - `create_context(name, description)`: 新しいコンテキストを作成する
+  - `list_contexts()`: すべてのコンテキストのリストを取得する
+  - `set_active_context(context_id)`: アクティブなコンテキストを設定する
+  - `get_active_context()`: 現在アクティブなコンテキストを取得する
+  - `set_context_value(key, value, context_id)`: コンテキストに値を設定する
+  - `get_context_value(key, context_id)`: コンテキストから値を取得する
+  - `delete_context(context_id)`: コンテキストを削除する
 
 ## デモの実行
 
-このチュートリアルには、3つのデモが含まれています：
+このチュートリアルには、4つのデモが含まれています：
 
-### LEDコントローラデモ
+### 基本的なエージェントデモ
 
-LEDコントローラデモでは、以下の操作を行います：
+基本的なエージェントデモでは、シンプルな対話エージェントを作成し、ユーザーの質問に答える方法を示します。
 
-1. LEDコントローラの登録と接続
-2. 明るさを75%に設定
-3. 色を赤(#FF0000)に設定
-4. パターンをpulseに設定
-5. 電源をオンにする
-6. 現在の状態を表示
-7. LEDコントローラを切断
+### ツールを使用するエージェントデモ
 
-### 温度センサーデモ
+ツールを使用するエージェントデモでは、外部ツール（天気情報の取得、情報検索など）を活用するエージェントを作成し、より高度なタスクを実行する方法を示します。
 
-温度センサーデモでは、以下の操作を行います：
+### コンテキスト管理を活用したエージェントデモ
 
-1. 温度センサーの登録と接続
-2. 現在の温度を読み取る
-3. 現在の湿度を読み取る
-4. データログを開始する
-5. 5回のデータ測定を行う
-6. データログを停止する
-7. ログデータを表示
-8. 温度センサーを切断
+コンテキスト管理を活用したエージェントデモでは、会話の文脈を維持し、一貫した対話を行うエージェントを作成する方法を示します。
 
-### ゲームコントローラデモ
+### Model Contexts Protocol (MCP)を使用するエージェントデモ
 
-ゲームコントローラデモでは、以下の操作を行います：
-
-1. ゲームコントローラの登録と接続
-2. 現在の入力状態を読み取る
-3. ボタン、ジョイスティック、加速度センサーの状態を表示
-4. 振動を設定する
-5. ゲームコントローラを切断
+Model Contexts Protocol (MCP)を使用するエージェントデモでは、複数のコンテキストを管理し、それらの間で情報を共有するエージェントを作成する方法を示します。
 
 ## コード例
 
-### アクセサリデバイスの作成と接続
+### 基本的なエージェントの作成
 
 ```python
-# ADKManagerの作成
-manager = ADKManager()
+from google_adk import Agent, AgentConfig
 
-# LEDコントローラの作成と登録
-led_controller = LEDController()
-manager.register_device(led_controller)
+# エージェントの設定
+config = AgentConfig(
+    model_name="gemini-1.5-pro",
+    temperature=0.7,
+    max_output_tokens=1024
+)
 
-# LEDコントローラを接続
-manager.connect_device(led_controller.device_id)
+# エージェントの作成
+agent = Agent(
+    name="シンプルアシスタント",
+    description="ユーザーの質問に答える基本的なアシスタントです。",
+    config=config
+)
 
-# LEDコントローラにコマンドを送信
-response = manager.send_command(led_controller.device_id, "set_brightness", {"value": 75})
-print(f"応答: {response}")
-
-# LEDコントローラを切断
-manager.disconnect_device(led_controller.device_id)
+# エージェントとの対話
+response = agent.process_message("こんにちは、あなたは何ができますか？")
+print(response)
 ```
 
-### 独自のアクセサリデバイスの作成
+### ツールを使用するエージェントの作成
 
 ```python
-class MyCustomAccessory(AccessoryDevice):
-    def __init__(self):
-        super().__init__(
-            name="My Custom Accessory",
-            manufacturer="My Company",
-            description="A custom accessory for demonstration",
-            connection_type=ConnectionType.USB,
-            protocol_version=ProtocolVersion.AOAv2,
-            features=["feature1", "feature2"]
-        )
-        
-        # デバイス固有の状態
-        self.state = {
-            "parameter1": 0,
-            "parameter2": "default"
-        }
-    
-    def send_command(self, command: str, params: Dict[str, Any] = {}) -> Dict[str, Any]:
-        params = params.copy()
-        
-        if not self.connected:
-            return {"status": "error", "message": "デバイスが接続されていません"}
-        
-        response = {"status": "success", "data": {}}
-        
-        if command == "set_parameter1":
-            if "value" in params:
-                self.state["parameter1"] = params["value"]
-                response["data"]["parameter1"] = self.state["parameter1"]
-            else:
-                response = {"status": "error", "message": "valueパラメータが必要です"}
-        
-        elif command == "set_parameter2":
-            if "value" in params:
-                self.state["parameter2"] = params["value"]
-                response["data"]["parameter2"] = self.state["parameter2"]
-            else:
-                response = {"status": "error", "message": "valueパラメータが必要です"}
-        
-        else:
-            response = {"status": "error", "message": f"不明なコマンド: {command}"}
-        
-        return response
+from google_adk import Agent, AgentConfig, Tool
+
+# 天気情報を取得するツール
+def get_weather(location: str, unit: str = "celsius") -> dict:
+    # 実際のAPIリクエストの代わりにシミュレーションデータを返す
+    return {
+        "location": location,
+        "temperature": 22 if unit == "celsius" else 72,
+        "condition": "晴れ",
+        "humidity": 65
+    }
+
+# 天気ツールの定義
+weather_tool = Tool(
+    name="get_weather",
+    description="指定された場所の天気情報を取得します",
+    function=get_weather,
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "location": {
+                "type": "string",
+                "description": "天気を取得する場所（都市名など）"
+            },
+            "unit": {
+                "type": "string",
+                "enum": ["celsius", "fahrenheit"],
+                "description": "温度の単位"
+            }
+        },
+        "required": ["location"]
+    }
+)
+
+# エージェントの作成
+agent = Agent(
+    name="ツール活用アシスタント",
+    description="ユーザーの質問に答え、ツールを使用してタスクを実行するアシスタントです。",
+    config=AgentConfig(model_name="gemini-1.5-pro"),
+    tools=[weather_tool]
+)
+
+# ツールの実行
+weather_result = agent.execute_tool("get_weather", location="東京", unit="celsius")
+print(weather_result)
+```
+
+### Model Contexts Protocol (MCP)を使用するエージェントの作成
+
+```python
+from google_adk import Agent, AgentConfig, Tool
+from google_adk.mcp import create_context, set_context_value, get_context_value
+
+# コンテキストの作成
+travel_context = create_context(
+    name="旅行プラン",
+    description="旅行の計画情報を保存するコンテキスト"
+)
+
+# コンテキストに値を設定
+set_context_value(
+    key="destination",
+    value="京都",
+    context_id=travel_context['context_id']
+)
+
+# コンテキストから値を取得
+destination = get_context_value(
+    key="destination",
+    context_id=travel_context['context_id']
+)
+
+print(f"旅行先: {destination}")
+
+# MCPツールの作成
+create_context_tool = Tool(
+    name="create_context",
+    description="新しいコンテキストを作成します",
+    function=create_context,
+    parameter_schema={
+        "type": "object",
+        "properties": {
+            "name": {
+                "type": "string",
+                "description": "コンテキストの名前"
+            },
+            "description": {
+                "type": "string",
+                "description": "コンテキストの説明"
+            }
+        },
+        "required": ["name"]
+    }
+)
+
+# MCPツールを使用するエージェントの作成
+agent = Agent(
+    name="MCPアシスタント",
+    description="Model Contexts Protocol (MCP)を使用して、複数のコンテキストを管理し、情報を共有するアシスタントです。",
+    config=AgentConfig(model_name="gemini-1.5-pro"),
+    tools=[create_context_tool]
+)
 ```
 
 ## 参考リソース
 
-- [Android Developers - USB Accessory](https://developer.android.com/develop/connectivity/usb/accessory)
-- [Android Open Accessory Protocol](https://source.android.com/devices/accessories/aoa)
-- [ADK 2012 Guide](https://source.android.com/devices/accessories/adk2)
+- [Google AI Platform](https://ai.google.dev/)
+- [Google Generative AI Python SDK](https://github.com/google/generative-ai-python)
+- [Gemini API Documentation](https://ai.google.dev/docs/gemini_api_overview)

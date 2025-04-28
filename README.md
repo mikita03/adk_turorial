@@ -14,6 +14,7 @@ Google Agent Development Kit (ADK)は、Googleの生成AIモデルを活用し�
    - 基本的なエージェントの作成
    - ツールを統合したエージェントの開発
    - コンテキスト管理を活用したエージェントの実装
+   - Model Contexts Protocol (MCP)を使用したエージェントの開発
 
 2. **Webベースのチュートリアル**: ADKの概念と使用方法を学ぶためのインタラクティブなWebアプリケーション
    - ADKの概要と主な特徴の説明
@@ -40,6 +41,7 @@ python main_tutorial.py
 python main_tutorial.py --demo basic    # 基本的なエージェント
 python main_tutorial.py --demo tool     # ツールを使用するエージェント
 python main_tutorial.py --demo context  # コンテキスト管理を活用したエージェント
+python main_tutorial.py --demo mcp      # Model Contexts Protocol (MCP)を使用するエージェント
 ```
 
 ### Webチュートリアル
