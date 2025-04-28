@@ -15,6 +15,10 @@ from typing import Dict, Any, List, Optional, Union
 
 try:
     from google_adk import Agent, AgentConfig, Tool, get_weather, search_information, create_sample_agent
+    from google_adk.mcp import (
+        create_context, list_contexts, set_active_context, get_active_context,
+        set_context_value, get_context_value, delete_context
+    )
 except ImportError:
     print("Error: Could not import from google_adk.")
     print("Make sure the google_adk package is properly installed.")
@@ -239,11 +243,176 @@ def run_context_agent_demo():
     print("\nコンテキスト管理を活用したエージェントのデモが完了しました。")
     print("詳細な実装は examples/context_agent.py を参照してください。")
 
+def run_mcp_agent_demo():
+    """Model Contexts Protocol (MCP)を使用するエージェントのデモを実行する"""
+    print("\n===== Model Contexts Protocol (MCP)を使用するエージェントのデモ =====")
+    
+    has_api_key = check_api_key()
+    
+    config = AgentConfig(
+        model_name="gemini-1.5-pro",
+        temperature=0.7,
+        max_output_tokens=1024
+    )
+    
+    create_context_tool = Tool(
+        name="create_context",
+        description="新しいコンテキストを作成します",
+        function=create_context,
+        parameter_schema={
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "コンテキストの名前"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "コンテキストの説明"
+                }
+            },
+            "required": ["name"]
+        }
+    )
+    
+    list_contexts_tool = Tool(
+        name="list_contexts",
+        description="すべてのコンテキストのリストを取得します",
+        function=list_contexts,
+        parameter_schema={
+            "type": "object",
+            "properties": {}
+        }
+    )
+    
+    set_context_value_tool = Tool(
+        name="set_context_value",
+        description="コンテキストに値を設定します",
+        function=set_context_value,
+        parameter_schema={
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string",
+                    "description": "値のキー"
+                },
+                "value": {
+                    "description": "設定する値"
+                },
+                "context_id": {
+                    "type": "string",
+                    "description": "値を設定するコンテキストのID（指定しない場合はアクティブなコンテキスト）"
+                }
+            },
+            "required": ["key", "value"]
+        }
+    )
+    
+    get_context_value_tool = Tool(
+        name="get_context_value",
+        description="コンテキストから値を取得します",
+        function=get_context_value,
+        parameter_schema={
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string",
+                    "description": "値のキー"
+                },
+                "context_id": {
+                    "type": "string",
+                    "description": "値を取得するコンテキストのID（指定しない場合はアクティブなコンテキスト）"
+                }
+            },
+            "required": ["key"]
+        }
+    )
+    
+    agent = Agent(
+        name="MCPアシスタント",
+        description="Model Contexts Protocol (MCP)を使用して、複数のコンテキストを管理し、情報を共有するアシスタントです。",
+        config=config,
+        tools=[
+            create_context_tool,
+            list_contexts_tool,
+            set_context_value_tool,
+            get_context_value_tool
+        ]
+    )
+    
+    print(f"\nエージェント '{agent.name}' を作成しました。")
+    print(f"説明: {agent.description}")
+    print("\n利用可能なMCPツール:")
+    for tool in agent.tools:
+        print(f"- {tool.name}: {tool.description}")
+    
+    print("\nModel Contexts Protocol (MCP)とは:")
+    print("MCPは、エージェントが複数のコンテキストを管理し、それらの間で情報を共有するための")
+    print("プロトコルです。これにより、エージェントはより複雑なタスクを実行し、長期的な会話や")
+    print("マルチステップのタスクをより効果的に管理できるようになります。")
+    
+    print("\nMCPの主な機能:")
+    print("- 複数のコンテキストの作成と管理")
+    print("- コンテキスト内での情報の保存と取得")
+    print("- コンテキスト間での情報の共有")
+    print("- 異なるコンテキスト間での切り替え")
+    
+    print("\nMCPの使用例:")
+    
+    print("\n1. 新しいコンテキストの作成:")
+    context_name = "旅行プラン"
+    context_description = "旅行の計画情報を保存するコンテキスト"
+    print(f"パラメータ: name='{context_name}', description='{context_description}'")
+    
+    try:
+        context_result = agent.execute_tool("create_context", name=context_name, description=context_description)
+        print("結果:")
+        print(json.dumps(context_result, ensure_ascii=False, indent=2))
+        context_id = context_result.get("context_id")
+    except Exception as e:
+        print(f"エラーが発生しました: {e}")
+        context_id = None
+    
+    if context_id:
+        print("\n2. コンテキストに値を設定:")
+        key = "destination"
+        value = "京都"
+        print(f"パラメータ: key='{key}', value='{value}', context_id='{context_id}'")
+        
+        try:
+            set_result = agent.execute_tool("set_context_value", key=key, value=value, context_id=context_id)
+            print("結果:")
+            print(json.dumps(set_result, ensure_ascii=False, indent=2))
+        except Exception as e:
+            print(f"エラーが発生しました: {e}")
+        
+        print("\n3. コンテキストから値を取得:")
+        print(f"パラメータ: key='{key}', context_id='{context_id}'")
+        
+        try:
+            get_result = agent.execute_tool("get_context_value", key=key, context_id=context_id)
+            print("結果:")
+            print(json.dumps(get_result, ensure_ascii=False, indent=2))
+        except Exception as e:
+            print(f"エラーが発生しました: {e}")
+    
+    print("\n4. すべてのコンテキストのリストを取得:")
+    
+    try:
+        list_result = agent.execute_tool("list_contexts")
+        print("結果:")
+        print(json.dumps(list_result, ensure_ascii=False, indent=2))
+    except Exception as e:
+        print(f"エラーが発生しました: {e}")
+    
+    print("\nModel Contexts Protocol (MCP)を使用するエージェントのデモが完了しました。")
+    print("詳細な実装は examples/mcp_agent.py を参照してください。")
+
 def main():
     """メインチュートリアルを実行する"""
     parser = argparse.ArgumentParser(description="Google Agent Development Kit (ADK) チュートリアル")
-    parser.add_argument("--demo", choices=["basic", "tool", "context", "all"], default="all",
-                        help="実行するデモを指定します（basic: 基本的なエージェント, tool: ツールを使用するエージェント, context: コンテキスト管理を活用したエージェント, all: すべて）")
+    parser.add_argument("--demo", choices=["basic", "tool", "context", "mcp", "all"], default="all",
+                        help="実行するデモを指定します（basic: 基本的なエージェント, tool: ツールを使用するエージェント, context: コンテキスト管理を活用したエージェント, mcp: Model Contexts Protocol (MCP)を使用するエージェント, all: すべて）")
     parser.add_argument("--verbose", action="store_true", help="詳細なログを表示します")
     
     args = parser.parse_args()
@@ -260,6 +429,7 @@ def main():
     print("- 自然言語理解: ユーザーの入力を理解し、適切な応答を生成")
     print("- ツール統合: 外部APIやサービスと連携して情報を取得・処理")
     print("- コンテキスト管理: 会話の文脈を維持し、一貫した対話を実現")
+    print("- Model Contexts Protocol (MCP): 複数のコンテキストを管理し、情報を共有")
     print("- カスタマイズ可能: 特定のドメインやタスクに特化したエージェントを構築可能")
     print("- マルチモーダル対応: テキスト、画像、音声などの複数のモダリティを処理可能")
     
@@ -271,6 +441,9 @@ def main():
     
     if args.demo in ["context", "all"]:
         run_context_agent_demo()
+    
+    if args.demo in ["mcp", "all"]:
+        run_mcp_agent_demo()
     
     print("\n" + "=" * 80)
     print("チュートリアルが完了しました。")
