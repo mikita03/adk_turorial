@@ -606,7 +606,7 @@ def set_context_value(key: str, value: Any, context_id: Optional[str] = None) ->
     }
 
 
-def get_context_value(key: str, context_id: Optional[str] = None) -> Dict[str, Any]:
+def get_context_value(key: str, context_id: Optional[str] = None) -> Any:
     """
     コンテキストから値を取得する
     
@@ -615,7 +615,7 @@ def get_context_value(key: str, context_id: Optional[str] = None) -> Dict[str, A
         context_id: 値を取得するコンテキストのID（指定しない場合はアクティブなコンテキスト）
         
     Returns:
-        取得した値
+        取得した値、またはコンテキストやキーが存在しない場合はNone
     """
     global _mcp_instance
     if _mcp_instance is None:
@@ -624,24 +624,14 @@ def get_context_value(key: str, context_id: Optional[str] = None) -> Dict[str, A
     context = _mcp_instance.get_context(context_id) if context_id else _mcp_instance.get_active_context()
     
     if not context:
-        return {
-            "success": False,
-            "error": "コンテキストが見つかりません"
-        }
+        logger.warning("コンテキストが見つかりません")
+        return None
     
     if key in context.data:
-        return {
-            "success": True,
-            "context_id": context.context_id,
-            "name": context.name,
-            "key": key,
-            "value": context.get_value(key)
-        }
+        return context.get_value(key)
     
-    return {
-        "success": False,
-        "error": f"キー '{key}' がコンテキスト '{context.name}' に存在しません"
-    }
+    logger.warning(f"キー '{key}' がコンテキスト '{context.name}' に存在しません")
+    return None
 
 
 def delete_context(context_id: str) -> Dict[str, Any]:
