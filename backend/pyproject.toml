@@ -9,6 +9,18 @@ readme = "README.md"
 python = "^3.12"
 fastapi = {extras = ["standard"], version = "^0.115.12"}
 psycopg = {extras = ["binary"], version = "^3.2.6"}
+langchain = "^0.3.26"
+langchain-openai = "^0.3.27"
+langgraph = "^0.5.1"
+chromadb = "^1.0.15"
+python-dotenv = "^1.1.1"
+google-api-python-client = "^2.174.0"
+google-auth-httplib2 = "^0.2.0"
+google-auth-oauthlib = "^1.2.2"
+websockets = "^15.0.1"
+langchain-anthropic = "^0.3.16"
+langchain-google-community = "^2.0.7"
+httpx = "^0.28.1"
 
 
 [build-system]
