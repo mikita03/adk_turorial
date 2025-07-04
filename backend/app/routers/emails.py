@@ -59,7 +59,10 @@ def get_supervisor_agent():
 async def get_emails(limit: int = 20, force_refresh: bool = False):
     """Get recent emails with intelligent caching and 2-week limit"""
     try:
+        logger.info(f"Getting emails with limit={limit}, force_refresh={force_refresh}")
+        
         if not gmail_service.service:
+            logger.warning("Gmail service not authenticated")
             raise HTTPException(status_code=401, detail="Gmail認証が必要です")
         
         processed_emails = await email_cache_service.get_recent_emails_cached(
@@ -67,12 +70,14 @@ async def get_emails(limit: int = 20, force_refresh: bool = False):
             force_refresh=force_refresh
         )
         
+        logger.info(f"Successfully processed {len(processed_emails)} emails")
+        
         urgent_count = len([e for e in processed_emails if e.priority.value == "urgent"])
         reply_needed_count = len([e for e in processed_emails if e.category.value == "reply_needed"])
         normal_count = len([e for e in processed_emails if e.priority.value == "normal"])
         fyi_count = len([e for e in processed_emails if e.priority.value == "fyi"])
         
-        return EmailListResponse(
+        response = EmailListResponse(
             emails=processed_emails,
             total_count=len(processed_emails),
             unread_count=reply_needed_count,  # Use reply_needed as unread
@@ -83,9 +88,14 @@ async def get_emails(limit: int = 20, force_refresh: bool = False):
             cache_status="cached" if not force_refresh else "refreshed"
         )
         
+        logger.debug(f"Response structure: total={response.total_count}, urgent={response.urgent_count}")
+        return response
+        
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Unexpected error in get_emails: {type(e).__name__}: {str(e)}")
+        logger.debug("Full traceback:", exc_info=True)
         raise HTTPException(status_code=500, detail=f"メール取得エラー: {str(e)}")
 
 @router.get("/{email_id}")

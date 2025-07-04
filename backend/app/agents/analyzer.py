@@ -13,11 +13,20 @@ class AnalyzerAgent:
     def __init__(self, llm_model: str = "gpt-4"):
         logger.info(f"Initializing AnalyzerAgent with model: {llm_model}")
         try:
-            self.llm = ChatOpenAI(model=llm_model, temperature=0.1)
-            logger.info("AnalyzerAgent ChatOpenAI client initialized successfully")
+            import os
+            api_key = os.getenv('OPENAI_API_KEY')
+            if not api_key or api_key == 'your_openai_api_key_here':
+                logger.warning("OPENAI_API_KEY not configured or using placeholder value. AI analysis will be disabled.")
+                self.llm = None
+                self.ai_enabled = False
+            else:
+                self.llm = ChatOpenAI(model=llm_model, temperature=0.1)
+                self.ai_enabled = True
+                logger.info("AnalyzerAgent ChatOpenAI client initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize AnalyzerAgent ChatOpenAI: {e}")
-            raise
+            self.llm = None
+            self.ai_enabled = False
         self.role = """
         あなたはメール分析の専門エージェントです。
         メールの要約、優先度判定、カテゴリ分類、重要情報抽出を行います。
@@ -25,6 +34,10 @@ class AnalyzerAgent:
     
     async def analyze_email(self, email: EmailContent) -> Dict[str, Any]:
         """Analyze email and extract key information"""
+        
+        if not self.ai_enabled or not self.llm:
+            logger.info(f"AI analysis disabled, using fallback for email: {email.subject}")
+            return self._create_fallback_analysis(email)
         
         analysis_prompt = f"""
         以下のメールを分析し、要約・分類・重要情報を抽出してください。
@@ -77,17 +90,13 @@ class AnalyzerAgent:
                 "success": True,
                 "email_summary": email_summary.dict(),
                 "analysis_details": analysis_result,
-                "processing_time": 0.0
+                "processing_time": 0.0,
+                "ai_analyzed": True
             }
             
         except Exception as e:
-            return {
-                "success": False,
-                "error": str(e),
-                "email_summary": None,
-                "analysis_details": None,
-                "processing_time": 0.0
-            }
+            logger.error(f"AI analysis failed for email {email.id}: {e}")
+            return self._create_fallback_analysis(email)
     
     def _extract_name_from_email(self, email_address: str) -> str:
         """Extract name from email address"""
@@ -152,3 +161,47 @@ class AnalyzerAgent:
                 entities.append(f"金額: {match}")
         
         return entities[:10]  # Limit to 10 entities
+    
+    def _create_fallback_analysis(self, email: EmailContent) -> Dict[str, Any]:
+        """Create basic analysis when AI is not available"""
+        
+        priority = "normal"
+        if any(keyword in email.subject.lower() for keyword in ["緊急", "urgent", "asap", "至急"]):
+            priority = "urgent"
+        elif any(keyword in email.subject.lower() for keyword in ["fyi", "参考", "情報"]):
+            priority = "fyi"
+        
+        category = "confirm_only"
+        if any(keyword in email.subject.lower() for keyword in ["返信", "reply", "回答", "確認"]):
+            category = "reply_needed"
+        elif any(keyword in email.subject.lower() for keyword in ["情報", "fyi", "参考"]):
+            category = "info"
+        
+        summary = email.body[:100] + "..." if len(email.body) > 100 else email.body
+        
+        email_summary = EmailSummary(
+            id=email.id,
+            from_email=email.from_email,
+            from_name=self._extract_name_from_email(email.from_email),
+            subject=email.subject,
+            date=email.date,
+            summary=summary,
+            priority=Priority(priority),
+            category=Category(category),
+            has_attachment=len(email.attachments) > 0,
+            important_entities=self._regex_entity_extraction(email.body)
+        )
+        
+        return {
+            "success": True,
+            "email_summary": email_summary.dict(),
+            "analysis_details": {
+                "summary": summary,
+                "priority": priority,
+                "category": category,
+                "important_entities": self._regex_entity_extraction(email.body),
+                "confidence_score": 0.5
+            },
+            "processing_time": 0.0,
+            "ai_analyzed": False
+        }
