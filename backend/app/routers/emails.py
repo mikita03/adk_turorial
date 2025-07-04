@@ -66,6 +66,8 @@ async def get_emails(limit: int = 20):
             unread_count=len([e for e in processed_emails if e.category.value == "reply_needed"])
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"メール取得エラー: {str(e)}")
 
@@ -88,6 +90,8 @@ async def get_email_detail(email_id: str):
             "analysis": result
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"メール詳細取得エラー: {str(e)}")
 
@@ -111,6 +115,8 @@ async def process_email(email_id: str, request: EmailProcessRequest):
             "processing_result": result
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"メール処理エラー: {str(e)}")
 
@@ -146,5 +152,7 @@ async def create_reply_draft(email_id: str):
         else:
             raise HTTPException(status_code=500, detail=reply_result.get("error", "返信生成に失敗しました"))
             
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"返信作成エラー: {str(e)}")
