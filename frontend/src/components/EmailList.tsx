@@ -10,9 +10,15 @@ import { emailAPI } from '../services/api';
 interface EmailListProps {
   onEmailSelect: (email: EmailSummary) => void;
   selectedEmailId?: string;
+  onStatsUpdate?: (stats: {
+    urgent: number;
+    normal: number;
+    fyi: number;
+    replyNeeded: number;
+  }) => void;
 }
 
-export const EmailList: React.FC<EmailListProps> = ({ onEmailSelect, selectedEmailId }) => {
+export const EmailList: React.FC<EmailListProps> = ({ onEmailSelect, selectedEmailId, onStatsUpdate }) => {
   const [emails, setEmails] = useState<EmailSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -62,6 +68,15 @@ export const EmailList: React.FC<EmailListProps> = ({ onEmailSelect, selectedEma
         total: response.total_count,
         unread: response.unread_count,
       });
+      
+      if (onStatsUpdate) {
+        onStatsUpdate({
+          urgent: response.urgent_count,
+          normal: response.normal_count,
+          fyi: response.fyi_count,
+          replyNeeded: response.reply_needed_count,
+        });
+      }
       console.log('🔍 DEBUG: State updated successfully');
       
     } catch (err: any) {
