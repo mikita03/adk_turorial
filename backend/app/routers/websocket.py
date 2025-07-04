@@ -5,7 +5,7 @@ import asyncio
 from datetime import datetime
 
 from ..agents.supervisor import SupervisorAgent
-from ..services.gmail_service import GmailService
+from ..services.shared_gmail import shared_gmail
 
 router = APIRouter()
 
@@ -31,7 +31,7 @@ class ConnectionManager:
                 self.active_connections.remove(connection)
 
 manager = ConnectionManager()
-gmail_service = GmailService()
+gmail_service = shared_gmail.get_service()
 supervisor_agent = SupervisorAgent()
 
 @router.websocket("/ws/agent")
