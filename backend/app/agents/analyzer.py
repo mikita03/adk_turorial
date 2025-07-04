@@ -10,7 +10,7 @@ from ..schemas.email import EmailContent, EmailSummary, Priority, Category
 logger = logging.getLogger(__name__)
 
 class AnalyzerAgent:
-    def __init__(self, llm_model: str = "gpt-4"):
+    def __init__(self, llm_model: str = "gpt-4o"):
         logger.info(f"Initializing AnalyzerAgent with model: {llm_model}")
         try:
             import os

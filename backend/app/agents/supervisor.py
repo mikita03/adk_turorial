@@ -10,7 +10,7 @@ from ..schemas.email import EmailContent, AgentResponse
 logger = logging.getLogger(__name__)
 
 class SupervisorAgent:
-    def __init__(self, llm_model: str = "gpt-4"):
+    def __init__(self, llm_model: str = "gpt-4o"):
         logger.info(f"Initializing SupervisorAgent with model: {llm_model}")
         try:
             self.llm = ChatOpenAI(model=llm_model, temperature=0.1)

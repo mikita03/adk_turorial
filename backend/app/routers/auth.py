@@ -43,7 +43,7 @@ async def auth_callback(code: str, state: Optional[str] = None):
         
         frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
         if success:
-            return RedirectResponse(url=f"{frontend_url}?auth=success")
+            return RedirectResponse(url=frontend_url)
         else:
             return RedirectResponse(url=f"{frontend_url}?auth=error")
             
