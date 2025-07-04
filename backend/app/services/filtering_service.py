@@ -15,7 +15,7 @@ class FilteringService:
         os.makedirs(vector_db_path, exist_ok=True)
         
         self.client = chromadb.PersistentClient(path=vector_db_path)
-        self.llm = ChatOpenAI(model="gpt-4", temperature=0.1)
+        self.llm = ChatOpenAI(model="gpt-4o", temperature=0.1)
         
         self.rules_collection = self.client.get_or_create_collection(
             name="filtering_rules",
