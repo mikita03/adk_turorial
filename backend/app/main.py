@@ -1,9 +1,22 @@
+import logging
+import sys
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('gmail_secretary.log')
+    ]
+)
+logger = logging.getLogger(__name__)
+logger.info("Gmail Secretary Agent API starting up with detailed logging")
 
 from .models.database import Base, engine
 Base.metadata.create_all(bind=engine)

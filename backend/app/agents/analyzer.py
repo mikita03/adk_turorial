@@ -1,3 +1,4 @@
+import logging
 from typing import Dict, Any, List
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
@@ -6,9 +7,17 @@ from datetime import datetime
 
 from ..schemas.email import EmailContent, EmailSummary, Priority, Category
 
+logger = logging.getLogger(__name__)
+
 class AnalyzerAgent:
     def __init__(self, llm_model: str = "gpt-4"):
-        self.llm = ChatOpenAI(model=llm_model, temperature=0.1)
+        logger.info(f"Initializing AnalyzerAgent with model: {llm_model}")
+        try:
+            self.llm = ChatOpenAI(model=llm_model, temperature=0.1)
+            logger.info("AnalyzerAgent ChatOpenAI client initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize AnalyzerAgent ChatOpenAI: {e}")
+            raise
         self.role = """
         あなたはメール分析の専門エージェントです。
         メールの要約、優先度判定、カテゴリ分類、重要情報抽出を行います。
