@@ -30,15 +30,58 @@ export const EmailList: React.FC<EmailListProps> = ({ onEmailSelect, selectedEma
       } else {
         setLoading(true);
       }
+      
+      console.log('🔍 DEBUG: Starting email load request', { forceRefresh });
       const response = await emailAPI.getEmails(20, forceRefresh);
+      console.log('🔍 DEBUG: Raw API response:', response);
+      console.log('🔍 DEBUG: Response type:', typeof response);
+      console.log('🔍 DEBUG: Response keys:', Object.keys(response || {}));
+      
+      if (!response) {
+        throw new Error('API response is null or undefined');
+      }
+      
+      if (!response.emails || !Array.isArray(response.emails)) {
+        console.error('🔍 DEBUG: Invalid emails array:', response.emails);
+        throw new Error(`Invalid emails array: ${typeof response.emails}`);
+      }
+      
+      if (typeof response.total_count !== 'number') {
+        console.error('🔍 DEBUG: Invalid total_count:', response.total_count);
+        throw new Error(`Invalid total_count: ${typeof response.total_count}`);
+      }
+      
+      if (typeof response.unread_count !== 'number') {
+        console.error('🔍 DEBUG: Invalid unread_count:', response.unread_count);
+        throw new Error(`Invalid unread_count: ${typeof response.unread_count}`);
+      }
+      
+      console.log('🔍 DEBUG: Response validation passed, setting state');
       setEmails(response.emails);
       setStats({
         total: response.total_count,
         unread: response.unread_count,
       });
-    } catch (err) {
-      setError('メールの読み込みに失敗しました');
-      console.error('Error loading emails:', err);
+      console.log('🔍 DEBUG: State updated successfully');
+      
+    } catch (err: any) {
+      console.error('🔍 DEBUG: Full error details:', err);
+      console.error('🔍 DEBUG: Error name:', err?.name);
+      console.error('🔍 DEBUG: Error message:', err?.message);
+      console.error('🔍 DEBUG: Error stack:', err?.stack);
+      
+      if (err?.response) {
+        console.error('🔍 DEBUG: HTTP response error:', err.response);
+        console.error('🔍 DEBUG: Response status:', err.response.status);
+        console.error('🔍 DEBUG: Response data:', err.response.data);
+        setError(`メールの読み込みに失敗しました (HTTP ${err.response.status}): ${err.response.data?.detail || err.message}`);
+      } else if (err?.request) {
+        console.error('🔍 DEBUG: Network request error:', err.request);
+        setError(`ネットワークエラー: ${err.message}`);
+      } else {
+        console.error('🔍 DEBUG: Other error:', err);
+        setError(`エラー: ${err.message || 'Unknown error'}`);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
