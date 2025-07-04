@@ -58,6 +58,15 @@ function App() {
     console.log('Reply draft created:', draftId);
   };
 
+  const handleStatsUpdate = (newStats: {
+    urgent: number;
+    normal: number;
+    fyi: number;
+    replyNeeded: number;
+  }) => {
+    setStats(newStats);
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -159,6 +168,7 @@ function App() {
             <EmailList
               onEmailSelect={handleEmailSelect}
               selectedEmailId={selectedEmail?.id}
+              onStatsUpdate={handleStatsUpdate}
             />
           </div>
 
