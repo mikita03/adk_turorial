@@ -13,7 +13,7 @@ class EmailCacheService:
         self.db_service = DatabaseService()
         self.gmail_service = shared_gmail.get_service()
     
-    def get_recent_emails_cached(self, limit: int = 20, force_refresh: bool = False) -> List[EmailSummary]:
+    async def get_recent_emails_cached(self, limit: int = 20, force_refresh: bool = False) -> List[EmailSummary]:
         db = next(self.db_service.get_db())
         
         try:
@@ -25,17 +25,32 @@ class EmailCacheService:
             latest_date = self.db_service.get_latest_email_date(db)
             
             if latest_date:
-                new_emails = self.gmail_service.get_emails_since_date(latest_date, max_results=100)
+                new_emails = self.gmail_service.get_emails_since_date(latest_date, max_results=200)  # Get more to account for filtering
+                new_emails = await self._filter_emails(new_emails)  # Apply AI filtering
             else:
-                result = self.gmail_service.get_recent_emails_optimized(days_back=14, max_results=100)
-                new_emails = result['emails']
+                result = self.gmail_service.get_recent_emails_optimized(days_back=14, max_results=200)
+                new_emails = await self._filter_emails(result['emails'])  # Apply AI filtering
             
             processed_summaries = []
             for email in new_emails:
-                cached_email = self.db_service.cache_email(db, email)
-                
-                summary = self._convert_email_to_summary(email)
-                processed_summaries.append(summary)
+                try:
+                    from ..agents.analyzer import AnalyzerAgent
+                    analyzer = AnalyzerAgent()
+                    analysis_result = await analyzer.analyze_email(email)
+                    
+                    cached_email = self.db_service.cache_email(db, email, analysis_result)
+                    
+                    if analysis_result.get("success") and analysis_result.get("email_summary"):
+                        summary = EmailSummary(**analysis_result["email_summary"])
+                    else:
+                        summary = self._convert_email_to_summary(email)
+                    
+                    processed_summaries.append(summary)
+                except Exception as e:
+                    print(f"Error analyzing email {email.id}: {e}")
+                    cached_email = self.db_service.cache_email(db, email)
+                    summary = self._convert_email_to_summary(email)
+                    processed_summaries.append(summary)
             
             all_cached = self.db_service.get_cached_emails(db, limit=limit, days_back=14)
             return self._convert_cached_to_summaries(all_cached)
@@ -71,6 +86,41 @@ class EmailCacheService:
             summaries.append(summary)
         
         return summaries
+    
+    def get_email_by_id_cached(self, email_id: str) -> Optional[EmailContent]:
+        """Get individual email by ID with caching fallback"""
+        db = next(self.db_service.get_db())
+        
+        try:
+            cached_email = self.db_service.get_email_content_by_id(db, email_id)
+            if cached_email:
+                return cached_email
+            
+            email = self.gmail_service._get_email_content(email_id)
+            if email:
+                self.db_service.cache_email(db, email)
+                return email
+            
+            return None
+        finally:
+            db.close()
+    
+    async def _filter_emails(self, emails: List[EmailContent]) -> List[EmailContent]:
+        """Filter emails using AI-driven filtering service"""
+        try:
+            from .filtering_service import FilteringService
+            filtering_service = FilteringService()
+            
+            filtered_emails = []
+            for email in emails:
+                should_filter = await filtering_service.should_filter_email(email)
+                if not should_filter:
+                    filtered_emails.append(email)
+            
+            return filtered_emails
+        except Exception as e:
+            print(f"Error filtering emails: {e}")
+            return emails  # Return unfiltered on error
     
     def _convert_email_to_summary(self, email: EmailContent) -> EmailSummary:
         return EmailSummary(
