@@ -1,3 +1,4 @@
+import logging
 from typing import Dict, Any, List, Optional
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
@@ -7,9 +8,17 @@ import json
 from ..schemas.email import EmailContent, ReplyDraft
 from ..services.learning_service import LearningService
 
+logger = logging.getLogger(__name__)
+
 class ResponderAgent:
     def __init__(self, llm_model: str = "gpt-4"):
-        self.llm = ChatOpenAI(model=llm_model, temperature=0.3)
+        logger.info(f"Initializing ResponderAgent with model: {llm_model}")
+        try:
+            self.llm = ChatOpenAI(model=llm_model, temperature=0.3)
+            logger.info("ResponderAgent ChatOpenAI client initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize ResponderAgent ChatOpenAI: {e}")
+            raise
         self.learning_service = LearningService()
         self.role = """
         あなたはメール返信の専門エージェントです。

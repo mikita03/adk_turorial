@@ -1,11 +1,13 @@
+import logging
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import Dict, Any, List
 import json
 import asyncio
 from datetime import datetime
 
-from ..agents.supervisor import SupervisorAgent
 from ..services.shared_gmail import shared_gmail
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -32,7 +34,30 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 gmail_service = shared_gmail.get_service()
-supervisor_agent = SupervisorAgent()
+
+def get_supervisor_agent():
+    """Get SupervisorAgent instance with detailed error logging"""
+    logger.info("Attempting to initialize SupervisorAgent for WebSocket")
+    try:
+        from ..agents.supervisor import SupervisorAgent
+        logger.debug("SupervisorAgent import successful")
+        
+        agent = SupervisorAgent()
+        logger.info("SupervisorAgent initialization successful")
+        return agent
+        
+    except Exception as e:
+        logger.error(f"SupervisorAgent initialization failed: {type(e).__name__}: {str(e)}")
+        logger.debug("Full traceback:", exc_info=True)
+        
+        if "api_key" in str(e).lower():
+            logger.error("OpenAI API key not configured. Set OPENAI_API_KEY environment variable.")
+        elif "openai" in str(e).lower():
+            logger.error("OpenAI client initialization failed. Check API configuration.")
+        else:
+            logger.error(f"Unexpected SupervisorAgent error: {e}")
+        
+        raise Exception(f"AI分析サービスが利用できません: {str(e)}")
 
 @router.websocket("/ws/agent")
 async def websocket_endpoint(websocket: WebSocket):
@@ -96,7 +121,19 @@ async def handle_email_processing(websocket: WebSocket, message: Dict[str, Any])
             }))
             return
         
+        try:
+            supervisor_agent = get_supervisor_agent()
+            logger.info("SupervisorAgent initialized for WebSocket processing")
+        except Exception as e:
+            logger.error(f"Failed to initialize SupervisorAgent for WebSocket: {e}")
+            await websocket.send_text(json.dumps({
+                "type": "error",
+                "message": f"AI分析サービスが利用できません: {str(e)}"
+            }))
+            return
+        
         routing_decision = await supervisor_agent.route_email(email)
+        logger.debug(f"WebSocket routing decision: {routing_decision}")
         await websocket.send_text(json.dumps({
             "type": "routing_decision",
             "email_id": email_id,
@@ -105,6 +142,7 @@ async def handle_email_processing(websocket: WebSocket, message: Dict[str, Any])
         }))
         
         result = await supervisor_agent.coordinate_agents(email, routing_decision)
+        logger.info("WebSocket AI processing completed successfully")
         
         for agent_name, agent_result in result.get("agent_results", {}).items():
             await websocket.send_text(json.dumps({
@@ -153,9 +191,21 @@ async def handle_reply_generation(websocket: WebSocket, message: Dict[str, Any])
             }))
             return
         
-        from ..agents.responder import ResponderAgent
-        responder = ResponderAgent()
+        try:
+            from ..agents.responder import ResponderAgent
+            logger.debug("ResponderAgent import successful")
+            responder = ResponderAgent()
+            logger.info("ResponderAgent initialized successfully")
+        except Exception as e:
+            logger.error(f"ResponderAgent initialization failed: {e}", exc_info=True)
+            await websocket.send_text(json.dumps({
+                "type": "error",
+                "message": f"返信生成サービスが利用できません: {str(e)}"
+            }))
+            return
+        
         reply_result = await responder.generate_reply(email)
+        logger.debug(f"Reply generation result: {reply_result.get('success', False)}")
         
         await websocket.send_text(json.dumps({
             "type": "reply_generated",
@@ -195,9 +245,21 @@ async def handle_email_analysis(websocket: WebSocket, message: Dict[str, Any]):
             }))
             return
         
-        from ..agents.analyzer import AnalyzerAgent
-        analyzer = AnalyzerAgent()
+        try:
+            from ..agents.analyzer import AnalyzerAgent
+            logger.debug("AnalyzerAgent import successful")
+            analyzer = AnalyzerAgent()
+            logger.info("AnalyzerAgent initialized successfully")
+        except Exception as e:
+            logger.error(f"AnalyzerAgent initialization failed: {e}", exc_info=True)
+            await websocket.send_text(json.dumps({
+                "type": "error",
+                "message": f"分析サービスが利用できません: {str(e)}"
+            }))
+            return
+        
         analysis_result = await analyzer.analyze_email(email)
+        logger.debug(f"Analysis result: {analysis_result.get('success', False)}")
         
         await websocket.send_text(json.dumps({
             "type": "analysis_complete",

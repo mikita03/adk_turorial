@@ -1,3 +1,4 @@
+import logging
 from typing import Dict, Any, List
 from langgraph.graph import StateGraph, MessagesState
 from langchain_core.messages import HumanMessage, AIMessage
@@ -6,9 +7,17 @@ import asyncio
 
 from ..schemas.email import EmailContent, AgentResponse
 
+logger = logging.getLogger(__name__)
+
 class SupervisorAgent:
     def __init__(self, llm_model: str = "gpt-4"):
-        self.llm = ChatOpenAI(model=llm_model, temperature=0.1)
+        logger.info(f"Initializing SupervisorAgent with model: {llm_model}")
+        try:
+            self.llm = ChatOpenAI(model=llm_model, temperature=0.1)
+            logger.info("ChatOpenAI client initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize ChatOpenAI: {e}")
+            raise
         self.role = """
         あなたはメール秘書システムの統括マネージャーです。
         受信したメールを分析し、適切な専門エージェントに作業を振り分けます。

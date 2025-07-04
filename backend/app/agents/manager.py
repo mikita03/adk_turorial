@@ -1,3 +1,4 @@
+import logging
 from typing import Dict, Any, List
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
@@ -7,9 +8,17 @@ from datetime import datetime
 
 from ..schemas.email import EmailContent
 
+logger = logging.getLogger(__name__)
+
 class ManagerAgent:
     def __init__(self, llm_model: str = "gpt-4"):
-        self.llm = ChatOpenAI(model=llm_model, temperature=0.1)
+        logger.info(f"Initializing ManagerAgent with model: {llm_model}")
+        try:
+            self.llm = ChatOpenAI(model=llm_model, temperature=0.1)
+            logger.info("ManagerAgent ChatOpenAI client initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize ManagerAgent ChatOpenAI: {e}")
+            raise
         self.role = """
         あなたはファイル管理の専門エージェントです。
         添付ファイルの自動保存、プロジェクトごとのフォルダ振り分け、
