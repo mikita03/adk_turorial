@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from typing import Optional
 import os
 
-from ..services.gmail_service import GmailService
+from ..services.shared_gmail import shared_gmail
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -17,7 +17,7 @@ class AuthCallbackRequest(BaseModel):
     code: str
     state: Optional[str] = None
 
-gmail_service = GmailService()
+gmail_service = shared_gmail.get_service()
 
 @router.get("/google")
 async def google_auth():

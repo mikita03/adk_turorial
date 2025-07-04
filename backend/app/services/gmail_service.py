@@ -94,7 +94,8 @@ class GmailService:
             
             return emails
         except HttpError as error:
-            print(f"An error occurred: {error}")
+            print(f"Gmail API error: {error}")
+            print(f"Error details: {error.error_details if hasattr(error, 'error_details') else 'No details'}")
             return []
     
     def _get_email_content(self, message_id: str) -> Optional[EmailContent]:

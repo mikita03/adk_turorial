@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Dict, Any
 from pydantic import BaseModel
 
-from ..services.gmail_service import GmailService
+from ..services.shared_gmail import shared_gmail
 from ..agents.supervisor import SupervisorAgent
 from ..schemas.email import EmailSummary, EmailContent, AgentResponse
 
@@ -17,7 +17,7 @@ class EmailListResponse(BaseModel):
     total_count: int
     unread_count: int
 
-gmail_service = GmailService()
+gmail_service = shared_gmail.get_service()
 supervisor_agent = SupervisorAgent()
 
 @router.get("/", response_model=EmailListResponse)
