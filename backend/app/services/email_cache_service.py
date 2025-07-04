@@ -65,10 +65,11 @@ class EmailCacheService:
                 try:
                     analysis = json.loads(cached.analysis_result)
                     summary_data = analysis.get('email_summary', {})
-                    if summary_data:
+                    if summary_data and summary_data.get('summary'):
                         summaries.append(EmailSummary(**summary_data))
                         continue
-                except:
+                except Exception as e:
+                    print(f"Failed to parse analysis_result for email {cached.id}: {e}")
                     pass
             
             summary = EmailSummary(
