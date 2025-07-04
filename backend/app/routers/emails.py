@@ -1,11 +1,13 @@
+import logging
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Dict, Any
 from pydantic import BaseModel
 
 from ..services.shared_gmail import shared_gmail
 from ..services.email_cache_service import EmailCacheService
-from ..agents.supervisor import SupervisorAgent
 from ..schemas.email import EmailSummary, EmailContent, AgentResponse
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/emails", tags=["emails"])
 
@@ -25,7 +27,33 @@ class EmailListResponse(BaseModel):
 
 gmail_service = shared_gmail.get_service()
 email_cache_service = EmailCacheService()
-supervisor_agent = SupervisorAgent()
+
+def get_supervisor_agent():
+    """Get SupervisorAgent instance with detailed error logging and lazy initialization"""
+    logger.info("Attempting to initialize SupervisorAgent")
+    try:
+        from ..agents.supervisor import SupervisorAgent
+        logger.debug("SupervisorAgent import successful")
+        
+        agent = SupervisorAgent()
+        logger.info("SupervisorAgent initialization successful")
+        return agent
+        
+    except Exception as e:
+        logger.error(f"SupervisorAgent initialization failed: {type(e).__name__}: {str(e)}")
+        logger.debug("Full traceback:", exc_info=True)
+        
+        if "api_key" in str(e).lower():
+            logger.error("OpenAI API key not configured. Set OPENAI_API_KEY environment variable.")
+        elif "openai" in str(e).lower():
+            logger.error("OpenAI client initialization failed. Check API configuration.")
+        else:
+            logger.error(f"Unexpected SupervisorAgent error: {e}")
+        
+        raise HTTPException(
+            status_code=503, 
+            detail=f"AI分析サービスが利用できません: {str(e)}"
+        )
 
 @router.get("/", response_model=EmailListResponse)
 async def get_emails(limit: int = 20, force_refresh: bool = False):
@@ -64,15 +92,29 @@ async def get_emails(limit: int = 20, force_refresh: bool = False):
 async def get_email_detail(email_id: str):
     """Get detailed email content and analysis"""
     try:
+        logger.info(f"Processing email detail request for email_id: {email_id}")
+        
         if not gmail_service.service:
+            logger.warning("Gmail service not authenticated")
             raise HTTPException(status_code=401, detail="Gmail認証が必要です")
         
+        logger.debug("Attempting to retrieve email from cache")
         email = email_cache_service.get_email_by_id_cached(email_id)
         if not email:
+            logger.warning(f"Email not found in cache or Gmail: {email_id}")
             raise HTTPException(status_code=404, detail="メールが見つかりません")
         
+        logger.debug(f"Email retrieved successfully: {email.subject}")
+        
+        logger.info("Initializing SupervisorAgent for AI analysis")
+        supervisor_agent = get_supervisor_agent()
+        
+        logger.info("Starting AI analysis for email")
         routing_decision = await supervisor_agent.route_email(email)
+        logger.debug(f"Routing decision: {routing_decision}")
+        
         result = await supervisor_agent.coordinate_agents(email, routing_decision)
+        logger.info("AI analysis completed successfully")
         
         return {
             "email": email.dict(),
@@ -82,21 +124,37 @@ async def get_email_detail(email_id: str):
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Unexpected error in get_email_detail: {type(e).__name__}: {str(e)}")
+        logger.debug("Full traceback:", exc_info=True)
         raise HTTPException(status_code=500, detail=f"メール詳細取得エラー: {str(e)}")
 
 @router.post("/{email_id}/process")
 async def process_email(email_id: str, request: EmailProcessRequest):
     """Process specific email through agents"""
     try:
+        logger.info(f"Processing email through agents for email_id: {email_id}")
+        
         if not gmail_service.service:
+            logger.warning("Gmail service not authenticated")
             raise HTTPException(status_code=401, detail="Gmail認証が必要です")
         
+        logger.debug("Retrieving email from Gmail")
         email = gmail_service._get_email_content(email_id)
         if not email:
+            logger.warning(f"Email not found in Gmail: {email_id}")
             raise HTTPException(status_code=404, detail="メールが見つかりません")
         
+        logger.debug(f"Email retrieved from Gmail: {email.subject}")
+        
+        logger.info("Initializing SupervisorAgent for AI processing")
+        supervisor_agent = get_supervisor_agent()
+        
+        logger.info("Starting AI processing for email")
         routing_decision = await supervisor_agent.route_email(email)
+        logger.debug(f"Routing decision: {routing_decision}")
+        
         result = await supervisor_agent.coordinate_agents(email, routing_decision)
+        logger.info("AI processing completed successfully")
         
         return {
             "success": True,
@@ -107,6 +165,8 @@ async def process_email(email_id: str, request: EmailProcessRequest):
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Unexpected error in process_email: {type(e).__name__}: {str(e)}")
+        logger.debug("Full traceback:", exc_info=True)
         raise HTTPException(status_code=500, detail=f"メール処理エラー: {str(e)}")
 
 @router.post("/{email_id}/reply")
