@@ -72,9 +72,7 @@ class EmailCacheService:
                         summaries.append(EmailSummary(**summary_data))
                         continue
                 except Exception as e:
-                    print(f"Failed to parse analysis_result for email {cached.id}: {e}")
                     pass
-            
             summary = EmailSummary(
                 id=cached.id,
                 from_email=cached.from_email,
