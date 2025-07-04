@@ -3,6 +3,7 @@ from typing import List, Dict, Any
 from pydantic import BaseModel
 
 from ..services.shared_gmail import shared_gmail
+from ..services.email_cache_service import EmailCacheService
 from ..agents.supervisor import SupervisorAgent
 from ..schemas.email import EmailSummary, EmailContent, AgentResponse
 
@@ -16,54 +17,29 @@ class EmailListResponse(BaseModel):
     emails: List[EmailSummary]
     total_count: int
     unread_count: int
+    cache_status: str
 
 gmail_service = shared_gmail.get_service()
+email_cache_service = EmailCacheService()
 supervisor_agent = SupervisorAgent()
 
 @router.get("/", response_model=EmailListResponse)
-async def get_emails(limit: int = 20):
-    """Get recent emails with AI analysis"""
+async def get_emails(limit: int = 20, force_refresh: bool = False):
+    """Get recent emails with intelligent caching and 2-week limit"""
     try:
         if not gmail_service.service:
             raise HTTPException(status_code=401, detail="Gmail認証が必要です")
         
-        emails = gmail_service.get_recent_emails(max_results=limit)
-        
-        processed_emails = []
-        for email in emails:
-            try:
-                routing_decision = await supervisor_agent.route_email(email)
-                result = await supervisor_agent.coordinate_agents(email, routing_decision)
-                
-                analyzer_result = result.get("agent_results", {}).get("analyzer", {})
-                if analyzer_result.get("success") and analyzer_result.get("email_summary"):
-                    email_summary_data = analyzer_result["email_summary"]
-                    email_summary = EmailSummary(**email_summary_data)
-                    processed_emails.append(email_summary)
-                else:
-                    from ..schemas.email import Priority, Category
-                    fallback_summary = EmailSummary(
-                        id=email.id,
-                        from_email=email.from_email,
-                        from_name=email.from_email.split('@')[0],
-                        subject=email.subject,
-                        date=email.date,
-                        summary=email.body[:100] + "..." if len(email.body) > 100 else email.body,
-                        priority=Priority.NORMAL,
-                        category=Category.CONFIRM_ONLY,
-                        has_attachment=len(email.attachments) > 0,
-                        important_entities=[]
-                    )
-                    processed_emails.append(fallback_summary)
-                    
-            except Exception as e:
-                print(f"Error processing email {email.id}: {e}")
-                continue
+        processed_emails = email_cache_service.get_recent_emails_cached(
+            limit=limit, 
+            force_refresh=force_refresh
+        )
         
         return EmailListResponse(
             emails=processed_emails,
             total_count=len(processed_emails),
-            unread_count=len([e for e in processed_emails if e.category.value == "reply_needed"])
+            unread_count=len([e for e in processed_emails if e.category.value == "reply_needed"]),
+            cache_status="cached" if not force_refresh else "refreshed"
         )
         
     except HTTPException:
