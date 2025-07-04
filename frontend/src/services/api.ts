@@ -14,6 +14,11 @@ export interface EmailListResponse {
   emails: EmailSummary[];
   total_count: number;
   unread_count: number;
+  urgent_count: number;
+  reply_needed_count: number;
+  normal_count: number;
+  fyi_count: number;
+  cache_status: string;
 }
 
 export interface AuthResponse {
