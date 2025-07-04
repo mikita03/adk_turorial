@@ -1,17 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
-import os
+import psycopg
 
-load_dotenv()
-
-from .routers import auth, emails, websocket
-
-app = FastAPI(
-    title="Gmail Secretary Agent API",
-    description="AI-powered Gmail management system with multi-agent architecture",
-    version="1.0.0"
-)
+app = FastAPI()
 
 # Disable CORS. Do not remove this for full-stack development.
 app.add_middleware(
@@ -22,31 +13,6 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
-app.include_router(auth.router)
-app.include_router(emails.router)
-app.include_router(websocket.router)
-
-@app.get("/")
-async def root():
-    return {
-        "message": "Gmail Secretary Agent API",
-        "version": "1.0.0",
-        "status": "running"
-    }
-
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy", "message": "Gmail Secretary Agent API is running"}
-
 @app.get("/healthz")
 async def healthz():
     return {"status": "ok"}
-
-@app.get("/config")
-async def get_config():
-    """Get client configuration"""
-    return {
-        "google_client_id": os.getenv("GOOGLE_CLIENT_ID", ""),
-        "backend_url": os.getenv("BACKEND_URL", "http://localhost:8000"),
-        "frontend_url": os.getenv("FRONTEND_URL", "http://localhost:3000")
-    }
