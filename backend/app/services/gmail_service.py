@@ -144,6 +144,11 @@ class GmailService:
             raise Exception("Gmail service not authenticated")
         
         try:
+            from datetime import timezone
+            
+            if since_date.tzinfo is None:
+                since_date = since_date.replace(tzinfo=timezone.utc)
+            
             date_filter = since_date.strftime('%Y/%m/%d')
             query = f"in:inbox after:{date_filter}"
             
@@ -158,8 +163,13 @@ class GmailService:
             
             for message in messages:
                 email_data = self._get_email_content(message['id'])
-                if email_data and email_data.date > since_date:
-                    emails.append(email_data)
+                if email_data:
+                    email_date = email_data.date
+                    if email_date.tzinfo is None:
+                        email_date = email_date.replace(tzinfo=timezone.utc)
+                    
+                    if email_date > since_date:
+                        emails.append(email_data)
             
             return emails
         except HttpError as error:
