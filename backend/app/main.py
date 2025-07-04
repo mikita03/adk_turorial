@@ -5,6 +5,9 @@ import os
 
 load_dotenv()
 
+from .models.database import Base, engine
+Base.metadata.create_all(bind=engine)
+
 from .routers import auth, emails, websocket
 
 app = FastAPI(

@@ -98,6 +98,74 @@ class GmailService:
             print(f"Error details: {error.error_details if hasattr(error, 'error_details') else 'No details'}")
             return []
     
+    def get_recent_emails_optimized(self, days_back: int = 14, max_results: int = 100, page_token: str = None) -> dict:
+        """Get recent emails with date filtering and pagination"""
+        if not self.service:
+            raise Exception("Gmail service not authenticated")
+        
+        try:
+            from datetime import datetime, timedelta
+            cutoff_date = datetime.now() - timedelta(days=days_back)
+            date_filter = cutoff_date.strftime('%Y/%m/%d')
+            
+            query = f"in:inbox after:{date_filter}"
+            
+            params = {
+                'userId': 'me',
+                'q': query,
+                'maxResults': min(max_results, 500)
+            }
+            if page_token:
+                params['pageToken'] = page_token
+                
+            results = self.service.users().messages().list(**params).execute()
+            
+            messages = results.get('messages', [])
+            next_page_token = results.get('nextPageToken')
+            
+            emails = []
+            for message in messages:
+                email_data = self._get_email_content(message['id'])
+                if email_data:
+                    emails.append(email_data)
+            
+            return {
+                'emails': emails,
+                'next_page_token': next_page_token,
+                'total_fetched': len(emails)
+            }
+        except HttpError as error:
+            print(f"Gmail API error: {error}")
+            return {'emails': [], 'next_page_token': None, 'total_fetched': 0}
+    
+    def get_emails_since_date(self, since_date: datetime, max_results: int = 100) -> List[EmailContent]:
+        """Get emails since a specific date (for differential sync)"""
+        if not self.service:
+            raise Exception("Gmail service not authenticated")
+        
+        try:
+            date_filter = since_date.strftime('%Y/%m/%d')
+            query = f"in:inbox after:{date_filter}"
+            
+            results = self.service.users().messages().list(
+                userId='me',
+                q=query,
+                maxResults=max_results
+            ).execute()
+            
+            messages = results.get('messages', [])
+            emails = []
+            
+            for message in messages:
+                email_data = self._get_email_content(message['id'])
+                if email_data and email_data.date > since_date:
+                    emails.append(email_data)
+            
+            return emails
+        except HttpError as error:
+            print(f"Gmail API error: {error}")
+            return []
+    
     def _get_email_content(self, message_id: str) -> Optional[EmailContent]:
         """Get detailed email content"""
         if not self.service:
