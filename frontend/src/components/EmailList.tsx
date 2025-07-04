@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { Separator } from './ui/separator';
 import { ScrollArea } from './ui/scroll-area';
-import { Mail, Clock, User, Paperclip, AlertCircle, Info, CheckCircle } from 'lucide-react';
+import { Mail, Clock, User, Paperclip, AlertCircle, Info, CheckCircle, RefreshCw } from 'lucide-react';
 import { EmailSummary } from '../types/email';
 import { emailAPI } from '../services/api';
 
@@ -16,6 +15,7 @@ interface EmailListProps {
 export const EmailList: React.FC<EmailListProps> = ({ onEmailSelect, selectedEmailId }) => {
   const [emails, setEmails] = useState<EmailSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({ total: 0, unread: 0 });
 
@@ -23,10 +23,14 @@ export const EmailList: React.FC<EmailListProps> = ({ onEmailSelect, selectedEma
     loadEmails();
   }, []);
 
-  const loadEmails = async () => {
+  const loadEmails = async (forceRefresh: boolean = false) => {
     try {
-      setLoading(true);
-      const response = await emailAPI.getEmails(20);
+      if (forceRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      const response = await emailAPI.getEmails(20, forceRefresh);
       setEmails(response.emails);
       setStats({
         total: response.total_count,
@@ -37,6 +41,7 @@ export const EmailList: React.FC<EmailListProps> = ({ onEmailSelect, selectedEma
       console.error('Error loading emails:', err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -131,7 +136,7 @@ export const EmailList: React.FC<EmailListProps> = ({ onEmailSelect, selectedEma
             <div className="text-center">
               <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-4" />
               <p className="text-red-500">{error}</p>
-              <Button onClick={loadEmails} className="mt-4">
+              <Button onClick={() => loadEmails()} className="mt-4">
                 再試行
               </Button>
             </div>
@@ -144,13 +149,27 @@ export const EmailList: React.FC<EmailListProps> = ({ onEmailSelect, selectedEma
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Mail className="h-5 w-5" />
-          メール一覧
-        </CardTitle>
-        <CardDescription>
-          全{stats.total}件 • 要返信{stats.unread}件
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              メール一覧
+            </CardTitle>
+            <CardDescription>
+              全{stats.total}件 • 要返信{stats.unread}件
+            </CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => loadEmails(true)}
+            disabled={refreshing}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? '更新中...' : '更新'}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="p-0">
         <ScrollArea className="h-[600px]">

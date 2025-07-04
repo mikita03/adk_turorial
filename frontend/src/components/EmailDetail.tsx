@@ -226,8 +226,8 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({ email, onReplyCreated 
           {/* Email Body */}
           <div>
             <h3 className="font-medium mb-2">メール本文</h3>
-            <ScrollArea className="h-64 w-full border rounded-md p-4">
-              <div className="whitespace-pre-wrap text-sm">{emailContent.body}</div>
+            <ScrollArea className="max-h-96 w-full border rounded-md p-4">
+              <div className="whitespace-pre-wrap text-sm leading-relaxed">{emailContent.body}</div>
             </ScrollArea>
           </div>
 
@@ -271,12 +271,102 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({ email, onReplyCreated 
 
           {/* Analysis Results */}
           {analysis && (
-            <div className="space-y-2">
+            <div className="space-y-4">
               <Separator />
-              <h3 className="font-medium">分析結果</h3>
-              <div className="text-xs text-gray-600 bg-gray-50 rounded p-2">
-                <pre>{JSON.stringify(analysis, null, 2)}</pre>
-              </div>
+              <h3 className="font-medium">AI分析結果</h3>
+              
+              {/* Routing Decision */}
+              {analysis.routing_decision && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="font-medium text-blue-900 mb-2">ルーティング判定</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="bg-blue-100 text-blue-800">
+                        {analysis.routing_decision.priority}
+                      </Badge>
+                      <span className="text-blue-700">
+                        使用エージェント: {analysis.routing_decision.agents_to_use?.join(', ')}
+                      </span>
+                    </div>
+                    <p className="text-blue-800">{analysis.routing_decision.reasoning}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Agent Results */}
+              {analysis.agent_results && Object.keys(analysis.agent_results).length > 0 && (
+                <div className="space-y-3">
+                  {Object.entries(analysis.agent_results).map(([agentName, result]: [string, any]) => (
+                    <div key={agentName} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                      <h4 className="font-medium text-gray-900 mb-2 capitalize">
+                        {agentName === 'analyzer' && '分析エージェント'}
+                        {agentName === 'responder' && '返信エージェント'}
+                        {agentName === 'manager' && '管理エージェント'}
+                      </h4>
+                      
+                      {result.success ? (
+                        <div className="space-y-2 text-sm">
+                          {result.analysis_details && (
+                            <>
+                              {result.analysis_details.key_points && (
+                                <div>
+                                  <span className="font-medium text-gray-700">重要ポイント:</span>
+                                  <ul className="list-disc list-inside ml-2 text-gray-600">
+                                    {result.analysis_details.key_points.map((point: string, idx: number) => (
+                                      <li key={idx}>{point}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                              {result.analysis_details.action_required && (
+                                <div>
+                                  <span className="font-medium text-gray-700">必要なアクション:</span>
+                                  <span className="ml-2 text-gray-600">{result.analysis_details.action_required}</span>
+                                </div>
+                              )}
+                              {result.analysis_details.deadline && (
+                                <div>
+                                  <span className="font-medium text-gray-700">期限:</span>
+                                  <span className="ml-2 text-gray-600">{result.analysis_details.deadline}</span>
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-red-600">
+                          <AlertCircle className="h-4 w-4" />
+                          <span className="text-sm">エラー: {result.error}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Final Recommendation */}
+              {analysis.final_recommendation && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h4 className="font-medium text-green-900 mb-2">最終推奨</h4>
+                  <div className="space-y-2 text-sm">
+                    <p className="text-green-800">{analysis.final_recommendation.summary}</p>
+                    {analysis.final_recommendation.recommended_actions && (
+                      <div className="flex flex-wrap gap-1">
+                        {analysis.final_recommendation.recommended_actions.map((action: string, idx: number) => (
+                          <Badge key={idx} variant="secondary" className="text-xs bg-green-100 text-green-800">
+                            {action}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                    {analysis.final_recommendation.next_steps && (
+                      <p className="text-green-700 mt-2">
+                        <span className="font-medium">次のステップ:</span> {analysis.final_recommendation.next_steps}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>

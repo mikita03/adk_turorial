@@ -40,8 +40,12 @@ export const authAPI = {
 };
 
 export const emailAPI = {
-  getEmails: async (limit: number = 20): Promise<EmailListResponse> => {
-    const response = await api.get(`/emails/?limit=${limit}`);
+  getEmails: async (limit: number = 20, forceRefresh: boolean = false): Promise<EmailListResponse> => {
+    const params = new URLSearchParams({ limit: limit.toString() });
+    if (forceRefresh) {
+      params.append('force_refresh', 'true');
+    }
+    const response = await api.get(`/emails/?${params.toString()}`);
     return response.data;
   },
 
