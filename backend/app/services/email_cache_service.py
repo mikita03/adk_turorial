@@ -48,8 +48,11 @@ class EmailCacheService:
                     processed_summaries.append(summary)
                 except Exception as e:
                     print(f"Error analyzing email {email.id}: {e}")
-                    cached_email = self.db_service.cache_email(db, email)
-                    summary = self._convert_email_to_summary(email)
+                    from ..agents.analyzer import AnalyzerAgent
+                    analyzer = AnalyzerAgent()
+                    fallback_result = analyzer._create_fallback_analysis(email)
+                    cached_email = self.db_service.cache_email(db, email, fallback_result)
+                    summary = EmailSummary(**fallback_result["email_summary"])
                     processed_summaries.append(summary)
             
             all_cached = self.db_service.get_cached_emails(db, limit=limit, days_back=14)
