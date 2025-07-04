@@ -46,3 +46,23 @@ class DatabaseService:
     def get_latest_email_date(self, db: Session) -> Optional[datetime]:
         latest = db.query(EmailCache).order_by(EmailCache.date.desc()).first()
         return latest.date if latest else None
+    
+    def get_cached_email_by_id(self, db: Session, email_id: str) -> Optional[EmailCache]:
+        """Get cached email by ID"""
+        return db.query(EmailCache).filter(EmailCache.id == email_id).first()
+    
+    def get_email_content_by_id(self, db: Session, email_id: str) -> Optional[EmailContent]:
+        """Get EmailContent from cache by ID"""
+        cached = self.get_cached_email_by_id(db, email_id)
+        if cached:
+            return EmailContent(
+                id=cached.id,
+                from_email=cached.from_email,
+                to_email=[],  # Not stored in cache
+                cc_email=[],  # Not stored in cache
+                subject=cached.subject or "",
+                body=cached.body or "",
+                date=cached.date,
+                attachments=[]  # Not stored in cache
+            )
+        return None
