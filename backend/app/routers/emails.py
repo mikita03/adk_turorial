@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from ..services.shared_gmail import shared_gmail
 from ..services.email_cache_service import EmailCacheService
-from ..schemas.email import EmailSummary, EmailContent, AgentResponse
+from ..schemas.email import EmailSummary, EmailContent, AgentResponse, Priority, Category
 
 logger = logging.getLogger(__name__)
 
@@ -72,10 +72,15 @@ async def get_emails(limit: int = 20, force_refresh: bool = False):
         
         logger.info(f"Successfully processed {len(processed_emails)} emails")
         
-        urgent_count = len([e for e in processed_emails if e.priority.value == "urgent"])
-        reply_needed_count = len([e for e in processed_emails if e.category.value == "reply_needed"])
-        normal_count = len([e for e in processed_emails if e.priority.value == "normal"])
-        fyi_count = len([e for e in processed_emails if e.priority.value == "fyi"])
+        logger.debug(f"Email priorities: {[e.priority for e in processed_emails]}")
+        logger.debug(f"Email categories: {[e.category for e in processed_emails]}")
+        
+        urgent_count = len([e for e in processed_emails if e.priority == Priority.URGENT])
+        reply_needed_count = len([e for e in processed_emails if e.category == Category.REPLY_NEEDED])
+        normal_count = len([e for e in processed_emails if e.priority == Priority.NORMAL])
+        fyi_count = len([e for e in processed_emails if e.priority == Priority.FYI])
+        
+        logger.info(f"Email counts - urgent: {urgent_count}, reply_needed: {reply_needed_count}, normal: {normal_count}, fyi: {fyi_count}")
         
         response = EmailListResponse(
             emails=processed_emails,
